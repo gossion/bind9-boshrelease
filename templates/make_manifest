@@ -11,8 +11,8 @@ fail() {
 	echo >&2 $*
 }
 
-if [[ "$infrastructure" != "aws-ec2" && "$infrastructure" != "openstack" && "$infrastructure" != "warden" ]] ; then
-  fail "usage: ./make_manifest <aws-ec2|openstack|warden>"
+if [[ "$infrastructure" != "aws-ec2" && "$infrastructure" != "openstack" && "$infrastructure" != "warden" && "$infrastructure" != "azure" ]] ; then
+  fail "usage: ./make_manifest <aws-ec2|openstack|warden|azure>"
   exit 1
 fi
 
@@ -22,6 +22,8 @@ case "${infrastructure}/${STEMCELL_OS}" in
   (aws-ec2/centos) STEMCELL_URL="https://bosh.io/d/stemcells/bosh-aws-xen-centos-7-go_agent" ;;
   (openstack/ubuntu) STEMCELL_URL="https://bosh.io/d/stemcells/bosh-openstack-kvm-ubuntu-trusty-go_agent" ;;
   (openstack/centos) STEMCELL_URL="https://bosh.io/d/stemcells/bosh-openstack-kvm-centos-7-go_agent" ;;
+  (azure/ubuntu) STEMCELL_URL="https://bosh.io/stemcells/bosh-azure-hyperv-ubuntu-trusty-go_agent" ;;
+  (azure/centos) STEMCELL_URL="https://bosh.io/stemcells/bosh-azure-hyperv-centos-7-go_agent" ;;
   (*)
     fail "Invalid infrastructure or OS specified."
     exit 1
@@ -51,6 +53,11 @@ if [[ $infrastructure = "openstack" && ${DIRECTOR_CPI} != "openstack" ]]; then
   exit 1
 fi
 
+if [[ $infrastructure = "azure" && ${DIRECTOR_CPI} != "azure" ]]; then
+  fail "Not targeting an Azure BOSH. Please make sure you have run 'bosh target' and are targeting an Azure BOSH before running this script."
+  exit 1
+fi
+
 function latest_uploaded_stemcell {
   echo $(bosh stemcells | grep bosh | grep $STEMCELL_OS | awk -F'|' '{ print $2, $3 }' | sort -nr -k2 | head -n1 | awk '{ print $1 }')
 }
@@ -60,7 +67,7 @@ if [[ -z ${STEMCELL} ]]; then
   echo
   echo "Uploading latest $DIRECTOR_CPI/$STEMCELL_OS stemcell..."
   echo " (from ${STEMCELL_URL})"
-  bosh upload stemcell $STEMCELL_URL
+  #bosh upload stemcell $STEMCELL_URL
 fi
 STEMCELL=${STEMCELL:-$(latest_uploaded_stemcell)}
 
@@ -86,5 +93,5 @@ spruce merge --prune meta \
   $tmpdir/stub-with-uuid.yml \
   $* > $tmpdir/$DEPLOYMENT_NAME-manifest.yml
 
-bosh deployment $tmpdir/$DEPLOYMENT_NAME-manifest.yml
+#bosh deployment $tmpdir/$DEPLOYMENT_NAME-manifest.yml
 bosh status

@@ -1,0 +1,56 @@
+meta:
+  environment: bind9-azure
+
+  stemcell:
+    name: bosh-azure-hyperv-ubuntu-trusty-go_agent
+    version: latest
+
+update:
+  canaries: 1
+  max_in_flight: 50
+  canary_watch_time: 1000-30000
+  update_watch_time: 1000-30000
+
+jobs:
+  - name: master
+    networks:
+      - name: named
+        static_ips: (( static_ips 0 ))
+  - name: slave
+    networks:
+      - name: named
+        static_ips: (( static_ips 1 2 ))
+
+compilation:
+  cloud_properties:
+    instance_type: Standard_F4
+  network: named
+  reuse_compilation_vms: true
+  workers: 2
+
+resource_pools:
+- cloud_properties:
+    instance_type: Standard_F2
+  name: named
+  network: named
+  stemcell:
+    name: bosh-azure-hyperv-ubuntu-trusty-go_agent
+    version: latest
+
+networks:
+- name: named
+  type: manual
+  subnets:
+  - cloud_properties:
+      security_group: nsg-cf
+      subnet_name: CloudFoundry
+      virtual_network_name: boshvnet-crp
+    dns:
+    - 168.63.129.16
+    - 8.8.8.8
+    gateway: 10.0.16.1
+    range: 10.0.16.0/20
+    reserved:
+    - 10.0.16.2 - 10.0.17.255
+    static:
+    - 10.0.18.1 - 10.0.18.10
